@@ -24,7 +24,7 @@ public class Client {
     }
 
     public void onReadHoldingRegisters(List<Short> readingRegisters) {
-        requestHandler.setReadingRegisters(readingRegisters);
+        requestHandler.setRegisters(readingRegisters);
     }
 
     public Short onWriteSingleRegister() {
@@ -32,7 +32,7 @@ public class Client {
     }
 
     public List<Short> onWriteMultipleRegisters() {
-        return requestHandler.getWritingRegisters();
+        return requestHandler.getRegisters();
     }
 
     public void onReadCoils(List<Boolean> readingCoils) {
@@ -53,7 +53,7 @@ public class Client {
         if (readingCoils.size() % 8 != 0) {
             coils.add(newByte);
         }
-        requestHandler.setReadingCoils(coils);
+        requestHandler.setCoils(coils);
     }
 
     public int onWriteSingleCoil() {
@@ -61,7 +61,7 @@ public class Client {
     }
 
     public List<Byte> onWriteMultipleCoils() {
-        List<Byte> coils = requestHandler.getWritingCoils();
+        List<Byte> coils = requestHandler.getCoils();
         List<Byte> output = new ArrayList<>();
 
         for (Byte coil : coils) {

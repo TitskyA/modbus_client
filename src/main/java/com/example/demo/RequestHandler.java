@@ -21,12 +21,10 @@ public class RequestHandler implements ServiceRequestHandler {
 
     private Logger logger = Logger.getLogger(RequestHandler.class.getName());
 
-    private List<Short> readingRegisters;
+    private List<Byte> coils = new ArrayList<>();
+    private List<Short> registers = new ArrayList<>();
     private short writingRegister;
-    private List<Short> writingRegisters = new ArrayList<>();
-    private List<Byte> readingCoils;
     private int writingCoil;
-    private List<Byte> writingCoils = new ArrayList<>();
     private int countOfWritingCoils;
 
     @Override
@@ -35,10 +33,12 @@ public class RequestHandler implements ServiceRequestHandler {
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(request.getQuantity());
         try {
             for (int i=0; i < request.getQuantity(); i++) {
-                buffer.writeShort(readingRegisters.get(i));
+                buffer.writeShort(registers.get(i));
             }
         } catch (NullPointerException exception) {
             logger.log(Level.WARNING, "Массив читаемых регистров пуст");
+        } catch (IndexOutOfBoundsException exception) {
+            logger.log(Level.WARNING, "Ожидается другое количество регистров");
         }
         service.sendResponse(new ReadHoldingRegistersResponse(buffer));
     }
@@ -48,6 +48,8 @@ public class RequestHandler implements ServiceRequestHandler {
         WriteSingleRegisterRequest request = service.getRequest();
         service.sendResponse(new WriteSingleRegisterResponse(request.getAddress(), request.getValue()));
         writingRegister = (short) request.getValue();
+        registers.clear();
+        registers.add(writingRegister);
     }
 
     @Override
@@ -55,9 +57,9 @@ public class RequestHandler implements ServiceRequestHandler {
         WriteMultipleRegistersRequest request = service.getRequest();
         service.sendResponse(new WriteMultipleRegistersResponse(request.getAddress(), request.getQuantity()));
         ByteBuf buffer = request.getValues();
-        writingRegisters.clear();
+        registers.clear();
         for (int i=0; i < request.getQuantity(); i++) {
-            writingRegisters.add(buffer.readShort());
+            registers.add(buffer.readShort());
         }
     }
 
@@ -66,7 +68,7 @@ public class RequestHandler implements ServiceRequestHandler {
         ReadCoilsRequest request = service.getRequest();
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(request.getQuantity());
         try {
-            for (Byte i: readingCoils) {
+            for (Byte i: coils) {
                 buffer.writeByte(i);
             }
         } catch (NullPointerException exception) {
@@ -80,6 +82,8 @@ public class RequestHandler implements ServiceRequestHandler {
         WriteSingleCoilRequest request = service.getRequest();
         service.sendResponse(new WriteSingleCoilResponse(request.getAddress(), request.getValue()));
         writingCoil = request.getValue();
+        coils.clear();
+        coils.add(writingCoil == 65280 ? (byte) 1 : (byte) 0);
     }
 
     @Override
@@ -88,9 +92,9 @@ public class RequestHandler implements ServiceRequestHandler {
         countOfWritingCoils = request.getQuantity();
         service.sendResponse(new WriteMultipleCoilsResponse(request.getAddress(), request.getQuantity()));
         ByteBuf buffer = request.getValues();
-        writingCoils.clear();
+        coils.clear();
         for (int i=0; i<request.getQuantity(); i=i+8) {
-            writingCoils.add(buffer.readByte());
+            coils.add(buffer.readByte());
         }
     }
 

@@ -5,38 +5,25 @@ import com.digitalpetri.modbus.responses.*;
 import com.digitalpetri.modbus.slave.ServiceRequestHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.stereotype.Component;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
 @Component
-@Getter
-@Setter
 public class RequestHandler implements ServiceRequestHandler {
 
-    private Logger logger = Logger.getLogger(RequestHandler.class.getName());
+    private final Logger logger = Logger.getLogger(RequestHandler.class.getName());
 
-    private boolean[] coils = new boolean[65535];
-    private short[] registers = new short[65535];
-    private short writingRegister;
-    private int writingCoil;
-    private int countOfWritingCoils;
+    private final boolean[] coils = new boolean[65535];
+    private final short[] registers = new short[65535];
 
     @Override
     public void onReadHoldingRegisters(ServiceRequest<ReadHoldingRegistersRequest, ReadHoldingRegistersResponse> service) {
         ReadHoldingRegistersRequest request = service.getRequest();
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(request.getQuantity());
-
             for (int i = request.getAddress(); i < request.getAddress() + request.getQuantity(); i++) {
                 buffer.writeShort(registers[i]);
             }
-
         service.sendResponse(new ReadHoldingRegistersResponse(buffer));
     }
 
@@ -68,7 +55,6 @@ public class RequestHandler implements ServiceRequestHandler {
                 newByte = (byte) (newByte | (byte) 1 << counter);
             }
             counter ++;
-
             if (counter == 8) {
                 buffer.writeByte(newByte);
                 newByte = 0;
@@ -91,16 +77,17 @@ public class RequestHandler implements ServiceRequestHandler {
     @Override
     public void onWriteMultipleCoils(ServiceRequest<WriteMultipleCoilsRequest, WriteMultipleCoilsResponse> service) {
         WriteMultipleCoilsRequest request = service.getRequest();
-        countOfWritingCoils = request.getQuantity();
         service.sendResponse(new WriteMultipleCoilsResponse(request.getAddress(), request.getQuantity()));
         ByteBuf buffer = request.getValues();
-        for (int i=request.getAddress(); i<request.getQuantity(); i=i+8) {
+        int writtenCoils = 0;
+        for (int i=request.getAddress(); i< request.getAddress() + request.getQuantity(); i=i+8) {
             byte packOfCoils = buffer.readByte();
             for (int j = 0; j < 8; j++) {
-                if (i + j < request.getQuantity()) {
+                if (j < (request.getQuantity() - writtenCoils)) {
                     coils[i+j] = (packOfCoils & (1 << j)) == (1 << j);
                 }
             }
+            writtenCoils += 8;
         }
     }
 
